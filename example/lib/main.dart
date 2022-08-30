@@ -29,21 +29,17 @@ class FimExample extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 32,
-        ),
-        child: Card(
-          child: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Fim(
-              controller: controller,
-              lineNumber: true,
-            ),
+      body: Center(
+        child: SizedBox(
+          width: 200,
+          height: 200,
+          child: Fim(
+            controller: controller,
+            lineNumber: true,
           ),
         ),
       ),
     );
   }
 }
+
