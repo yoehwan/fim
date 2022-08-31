@@ -1,9 +1,7 @@
 import 'dart:math' as math;
 import 'package:fim/fim.dart';
-import 'package:fim/src/intent/direction/direction_action.dart';
-import 'package:fim/src/intent/direction/direction_intent.dart';
-import 'package:fim/src/intent/mode/mode_action.dart';
-import 'package:fim/src/intent/mode/mode_intent.dart';
+import 'package:fim/src/enum/word_postion.dart';
+import 'package:fim/src/intent/intent.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -21,6 +19,7 @@ class Fim extends StatefulWidget {
 
 class _FimState extends State<Fim> {
   final ValueNotifier<FimMode> modeNotifier = ValueNotifier(FimMode.command);
+  FimMode get mode => modeNotifier.value;
   final FocusNode focusNode = FocusNode();
   final ScrollController scrollController = ScrollController();
   bool isArrow(LogicalKeyboardKey key) {
@@ -28,92 +27,157 @@ class _FimState extends State<Fim> {
     return list.contains(key.keyId);
   }
 
+  Map<ShortcutActivator, Intent> _insertShortcuts() {
+    if (!mode.isInsert) {
+      return {};
+    }
+    return {
+      const SingleActivator(LogicalKeyboardKey.escape):
+          const ModeIntent(FimMode.command),
+    };
+  }
+
+  Map<ShortcutActivator, Intent> _commandShortcuts() {
+    if (!mode.isCommand) {
+      return {};
+    }
+    return {
+      const SingleActivator(LogicalKeyboardKey.keyA):
+          const ModeIntent(FimMode.insert),
+      // Direction
+      const SingleActivator(LogicalKeyboardKey.keyH):
+          const NavigatorArrowIntent(TraversalDirection.left),
+      const SingleActivator(LogicalKeyboardKey.keyL):
+          const NavigatorArrowIntent(TraversalDirection.right),
+      const SingleActivator(LogicalKeyboardKey.keyJ):
+          const NavigatorArrowIntent(TraversalDirection.down),
+      const SingleActivator(LogicalKeyboardKey.keyK):
+          const NavigatorArrowIntent(TraversalDirection.up),
+
+      // Navigator
+      const SingleActivator(LogicalKeyboardKey.keyE):
+          const NavigatorWordIntent(front: true, wordPostion: WordPostion.tail),
+      const SingleActivator(LogicalKeyboardKey.keyW):
+          const NavigatorWordIntent(front: true, wordPostion: WordPostion.head),
+      const SingleActivator(LogicalKeyboardKey.keyB): const NavigatorWordIntent(
+          front: false, wordPostion: WordPostion.head),
+    };
+  }
+
+  Map<ShortcutActivator, Intent> _defaultShortcuts() {
+    return {
+      // Direction
+      const SingleActivator(LogicalKeyboardKey.arrowLeft):
+          const NavigatorArrowIntent(TraversalDirection.left),
+      const SingleActivator(LogicalKeyboardKey.arrowRight):
+          const NavigatorArrowIntent(TraversalDirection.right),
+      const SingleActivator(LogicalKeyboardKey.arrowDown):
+          const NavigatorArrowIntent(TraversalDirection.down),
+      const SingleActivator(LogicalKeyboardKey.arrowUp):
+          const NavigatorArrowIntent(TraversalDirection.up),
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(builder: (context, constraints) {
-      return ColoredBox(
-        color: Colors.black.withOpacity(0.1),
-        child: Shortcuts(
-          shortcuts: const {
-            SingleActivator(LogicalKeyboardKey.keyA): InsertModeIntent(),
-            SingleActivator(LogicalKeyboardKey.escape): CommandModeIntent(),
-            SingleActivator(LogicalKeyboardKey.arrowLeft):
-                DirectionIntent(TraversalDirection.left),
-            SingleActivator(LogicalKeyboardKey.arrowRight):
-                DirectionIntent(TraversalDirection.right),
-            SingleActivator(LogicalKeyboardKey.arrowDown):
-                DirectionIntent(TraversalDirection.down),
-            SingleActivator(LogicalKeyboardKey.arrowUp):
-                DirectionIntent(TraversalDirection.up),
-          },
-          child: Actions(
-            actions: {
-              CommandModeIntent: ModeAction(modeNotifier),
-              InsertModeIntent: ModeAction(modeNotifier),
-              DirectionIntent: DirectionAction(widget.controller),
-            },
-            child: Focus(
-              autofocus: true,
-              includeSemantics: false,
-              debugLabel: 'FimEditor-$hashCode',
-              focusNode: focusNode,
-              onKey: (node, event) {
-                if (event is RawKeyUpEvent) {
-                  return KeyEventResult.handled;
-                }
-                final logicalKey = event.logicalKey;
-                if (isArrow(logicalKey) ||
-                    logicalKey == LogicalKeyboardKey.controlLeft) {
-                  return KeyEventResult.ignored;
-                }
-                String keyLabel = logicalKey.keyLabel;
-                if (event.isKeyPressed(LogicalKeyboardKey.enter)) {
-                  keyLabel = "\n";
-                }
-                final text = widget.controller.text;
-                final newText = text.characters.toList()
-                  ..insert(widget.controller.selection.baseOffset, keyLabel);
-                widget.controller.value = widget.controller.value.copyWith(
-                  text: newText.join(),
-                  selection: widget.controller.selection.copyWith(
-                    baseOffset: widget.controller.selection.baseOffset + 1,
-                  ),
-                );
-                return KeyEventResult.handled;
-              },
-              child: ValueListenableBuilder<FimMode>(
-                valueListenable: modeNotifier,
-                builder: (context, mode, _) {
-                  return ValueListenableBuilder<TextEditingValue>(
-                    valueListenable: widget.controller,
-                    builder: (context, value, _) {
-                      return SizedBox(
-                        width: constraints.maxWidth,
-                        height: constraints.maxHeight,
-                        child: SingleChildScrollView(
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return ColoredBox(
+          color: Colors.black.withOpacity(0.1),
+          child: ValueListenableBuilder<FimMode>(
+            valueListenable: modeNotifier,
+            builder: (context, mode, _) {
+              return Shortcuts(
+                shortcuts: {
+                  ..._defaultShortcuts(),
+                  ..._insertShortcuts(),
+                  ..._commandShortcuts(),
+                },
+                child: Actions(
+                  actions: {
+                    NavigatorWordIntent: NavigatorWordAction(widget.controller),
+                    ModeIntent: ModeAction(modeNotifier),
+                    NavigatorArrowIntent:
+                        NavigatorArrowAction(widget.controller),
+                  },
+                  child: Focus(
+                    autofocus: true,
+                    includeSemantics: false,
+                    debugLabel: 'FimEditor-$hashCode',
+                    focusNode: focusNode,
+                    onKey: (node, event) {
+                      if (event is RawKeyUpEvent) {
+                        return KeyEventResult.handled;
+                      }
+                      if (mode.isInsert) {
+                        final logicalKey = event.logicalKey;
+                        if (isArrow(logicalKey) ||
+                            logicalKey == LogicalKeyboardKey.controlLeft) {
+                          return KeyEventResult.ignored;
+                        }
+                        if (logicalKey == LogicalKeyboardKey.escape) {
+                          return KeyEventResult.ignored;
+                        }
+                        String keyLabel = logicalKey.keyLabel;
+                        if (logicalKey == LogicalKeyboardKey.enter) {
+                          keyLabel = "\n";
+                        }
+                        final isBS = logicalKey == LogicalKeyboardKey.backspace;
+                        final text = widget.controller.text;
+                        final newText = text.characters.toList();
+                        int currentOffset =
+                            widget.controller.selection.baseOffset;
+                        if (isBS) {
+                          newText.removeAt(currentOffset - 1);
+                          currentOffset--;
+                        } else {
+                          newText.insert(currentOffset, keyLabel.toLowerCase());
+                          currentOffset++;
+                        }
+                        widget.controller.value =
+                            widget.controller.value.copyWith(
+                          text: newText.join(),
+                          selection: widget.controller.selection.copyWith(
+                            baseOffset: currentOffset,
+                          ),
+                        );
+                      }
+                      return KeyEventResult.ignored;
+                    },
+                    child: ValueListenableBuilder<TextEditingValue>(
+                      valueListenable: widget.controller,
+                      builder: (context, value, _) {
+                        return SizedBox(
+                          width: constraints.maxWidth,
+                          height: constraints.maxHeight,
                           child: SingleChildScrollView(
-                            scrollDirection: Axis.horizontal,
-                            child: _FimRenderObjectWidget(
-                              text: widget.controller.buildTextSpan(
-                                context: context,
-                                withComposing: true,
+                            child: SingleChildScrollView(
+                              scrollDirection: Axis.horizontal,
+                              child: _FimRenderObjectWidget(
+                                text: widget.controller.buildTextSpan(
+                                  context: context,
+                                  withComposing: true,
+                                ),
+                                lineNumber: widget.lineNumber,
+                                caretOffset: value.selection.baseOffset,
+                                mode: mode,
+                                onTaexPainter: (tp) {
+                                  widget.controller.textPainter = tp;
+                                },
                               ),
-                              lineNumber: widget.lineNumber,
-                              caretOffset: value.selection.baseOffset,
-                              mode: mode,
                             ),
                           ),
-                        ),
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              );
+            },
           ),
-        ),
-      );
-    });
+        );
+      },
+    );
   }
 }
 
@@ -124,13 +188,14 @@ class _FimRenderObjectWidget extends LeafRenderObjectWidget {
     required this.lineNumber,
     required this.caretOffset,
     required this.mode,
+    required this.onTaexPainter,
   }) : super(key: key);
 
   final InlineSpan? text;
   final bool lineNumber;
   final int caretOffset;
   final FimMode mode;
-
+  final Function(TextPainter textPainter) onTaexPainter;
   @override
   RenderFim createRenderObject(BuildContext context) {
     return RenderFim(
@@ -138,6 +203,7 @@ class _FimRenderObjectWidget extends LeafRenderObjectWidget {
       lineNumber: lineNumber,
       caretOffset: caretOffset,
       mode: mode,
+      onTaexPainter: onTaexPainter,
     );
   }
 
@@ -157,6 +223,7 @@ class RenderFim extends RenderBox {
     required bool lineNumber,
     required int caretOffset,
     required FimMode mode,
+    required this.onTaexPainter,
   })  : _mode = mode,
         _caretOffset = caretOffset,
         _lineNumber = lineNumber,
@@ -164,6 +231,8 @@ class RenderFim extends RenderBox {
           text: text,
           textDirection: TextDirection.ltr,
         );
+
+  final Function(TextPainter textPainter) onTaexPainter;
 
   late FimMode _mode;
   FimMode get mode => _mode;
@@ -217,6 +286,7 @@ class RenderFim extends RenderBox {
 
   void _layoutTextPainter() {
     _textPainter.layout();
+    onTaexPainter(_textPainter);
   }
 
   @override

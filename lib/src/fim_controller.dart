@@ -1,4 +1,3 @@
-import 'dart:ui';
 
 import 'package:flutter/material.dart';
 
@@ -7,7 +6,7 @@ class FimController extends TextEditingController {
     String? text,
   }) {
     value = TextEditingValue(
-      text: text ?? "",
+      text: text ?? "aa bb cc dd ee\nee ff aa cc ",
       selection: const TextSelection.collapsed(
         offset: 0,
       ),
@@ -15,7 +14,7 @@ class FimController extends TextEditingController {
     );
   }
 
-  final FocusNode focusNode = FocusNode();
+  late TextPainter textPainter;
 
   @override
   TextSpan buildTextSpan({
@@ -26,7 +25,11 @@ class FimController extends TextEditingController {
     return TextSpan(
       text: text,
       style: const TextStyle(
-          color: Colors.black, fontFeatures: [FontFeature.tabularFigures()]),
+        package: "fim",
+        fontFamily: "Hack",
+        color: Colors.black,
+        // fontFeatures: [FontFeature.tabularFigures()],
+      ),
     );
   }
 }

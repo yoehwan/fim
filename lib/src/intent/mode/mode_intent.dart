@@ -1,19 +1,6 @@
-import 'package:fim/fim.dart';
-import 'package:flutter/material.dart';
+part of intent;
 
-abstract class ModeIntent extends Intent {
-  const ModeIntent();
-  FimMode get mode;
-}
-
-class CommandModeIntent extends ModeIntent {
-  const CommandModeIntent();
-  @override
-  FimMode get mode => FimMode.command;
-}
-
-class InsertModeIntent extends ModeIntent {
-  const InsertModeIntent();
-  @override
-  FimMode get mode => FimMode.insert;
+class ModeIntent extends Intent {
+  const ModeIntent(this.mode);
+  final FimMode mode;
 }

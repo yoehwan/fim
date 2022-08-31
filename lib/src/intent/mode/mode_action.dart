@@ -1,7 +1,4 @@
-import 'package:fim/src/enum/mode.dart';
-import 'package:fim/src/intent/mode/mode_intent.dart';
-import 'package:flutter/material.dart';
-
+part of intent;
 class ModeAction extends Action<ModeIntent> {
   ModeAction(this.notifier);
   final ValueNotifier<FimMode> notifier;
