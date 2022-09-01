@@ -123,27 +123,17 @@ class _FimState extends State<Fim> {
                         if (logicalKey == LogicalKeyboardKey.enter) {
                           keyLabel = "\n";
                         }
+                        print(logicalKey);
                         final isBS = logicalKey == LogicalKeyboardKey.backspace;
-                        final text = widget.controller.text;
-                        final newText = text.characters.toList();
                         int currentOffset = widget.controller.offset;
                         if (isBS) {
                           controller.removeChar(currentOffset);
-                          // newText.removeAt(currentOffset - 1);
-                          // currentOffset--;
                         } else {
                           controller.insertChar(
                             currentOffset,
                             keyLabel.toLowerCase(),
                           );
-                          // newText.insert(currentOffset, keyLabel.toLowerCase());
-                          // currentOffset++;
                         }
-                        widget.controller.value =
-                            widget.controller.value.copyWith(
-                          fimText: FimText(newText.join()),
-                          offset: currentOffset,
-                        );
                       }
                       return KeyEventResult.ignored;
                     },

@@ -75,19 +75,4 @@ class FimText {
     }
     return null;
   }
-
-  // TODO: Optimize
-  void insertChar(int offset, String char) {
-    final newText = text.characters.toList();
-    newText.insert(offset, char);
-    print(newText.join());
-    _loadFimText(newText.join());
-  }
-
-  // TODO: Optimize
-  void removeChar(int offset) {
-    final newText = text.characters.toList();
-    newText.removeAt(offset);
-    _loadFimText(newText.join());
-  }
 }

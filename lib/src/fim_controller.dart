@@ -34,15 +34,19 @@ class FimController extends ValueNotifier<FimValue> {
   }
 
   void insertChar(int offset, String char) {
+    final newText = text.characters.toList();
+    newText.insert(offset, char);
     value = value.copyWith(
-      fimText: fimText,
+      fimText: FimText(newText.join()),
       offset: offset + 1,
     );
   }
 
   void removeChar(int offset) {
+    final newText = text.characters.toList();
+    newText.removeAt(offset);
     value = value.copyWith(
-      fimText: fimText..removeChar(offset),
+      fimText: FimText(newText.join()),
       offset: offset - 1,
     );
   }
