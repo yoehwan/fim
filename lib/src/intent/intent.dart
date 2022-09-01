@@ -16,4 +16,5 @@ part 'navigator/arrow/navigator_arrow_intent.dart';
 part 'navigator/word/navigator_word_action.dart';
 part 'navigator/word/navigator_word_intent.dart';
 
-abstract class FimIntent extends Intent {}
+abstract class FimIntent extends Intent {
+}

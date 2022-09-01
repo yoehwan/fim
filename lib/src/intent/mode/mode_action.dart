@@ -1,10 +1,10 @@
 part of intent;
-class ModeAction extends Action<ModeIntent> {
-  ModeAction(this.notifier);
-  final ValueNotifier<FimMode> notifier;
 
+class ModeAction extends Action<ModeIntent> {
+  ModeAction(this.controller);
+  final FimController controller;
   @override
   void invoke(ModeIntent intent) {
-    notifier.value = intent.mode;
+    controller.mode = intent.mode;
   }
 }

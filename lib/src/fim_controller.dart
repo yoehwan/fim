@@ -1,34 +1,59 @@
-
+import 'package:fim/fim.dart';
+import 'package:fim/src/model/fim_text.dart';
+import 'package:fim/src/model/fim_value.dart';
 import 'package:flutter/material.dart';
 
-class FimController extends TextEditingController {
+const testText = "aa bb cc dd ee \naa bb dfdf   er ";
+
+class FimController extends ValueNotifier<FimValue> {
   FimController({
     String? text,
-  }) {
-    value = TextEditingValue(
-      text: text ?? "aa bb cc dd ee\nee ff aa cc ",
-      selection: const TextSelection.collapsed(
-        offset: 0,
-      ),
-      composing: const TextRange.collapsed(0),
+  }) : super(
+          FimValue(
+            fimText: FimText(text ?? testText),
+            offset: 0,
+            mode: FimMode.insert,
+          ),
+        );
+  FimText get fimText => value.fimText;
+  String get text => value.fimText.text;
+  int get offset => value.offset;
+  set offset(int newOffset) {
+    if (value.offset == newOffset) {
+      return;
+    }
+    value = value.copyWith(offset: newOffset);
+  }
+
+  FimMode get mode => value.mode;
+  set mode(FimMode newMode) {
+    if (value.mode == newMode) {
+      return;
+    }
+    value = value.copyWith(mode: newMode);
+  }
+
+  void insertChar(int offset, String char) {
+    value = value.copyWith(
+      fimText: fimText,
+      offset: offset + 1,
     );
   }
 
-  late TextPainter textPainter;
+  void removeChar(int offset) {
+    value = value.copyWith(
+      fimText: fimText..removeChar(offset),
+      offset: offset - 1,
+    );
+  }
 
-  @override
-  TextSpan buildTextSpan({
-    required BuildContext context,
-    TextStyle? style,
-    required bool withComposing,
-  }) {
+  TextSpan buildTextSpan() {
     return TextSpan(
-      text: text,
+      text: value.fimText.text,
       style: const TextStyle(
         package: "fim",
         fontFamily: "Hack",
         color: Colors.black,
-        // fontFeatures: [FontFeature.tabularFigures()],
       ),
     );
   }

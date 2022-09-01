@@ -1,83 +1,93 @@
+library fim_text;
+
+import 'package:flutter/widgets.dart';
+
+part 'fim_word.dart';
+
 class FimText {
-  FimText(String text) {
-    int currentOffset = 0;
+  FimText(this.text) {
+    _loadFimText(text);
+  }
+
+  void _loadFimText(String text) {
+    this.text = text;
+    fimWord = FimWord.empty();
+    int offset = 0;
     FimWord beforeWord = fimWord;
-    final lineList = text.split("\n");
-    for (final line in lineList) {
-      final words = line.split(" ");
-      for (final word in words) {
-        if (word.trim().isNotEmpty) {
-          final tmpWord = FimWord(
-            start: currentOffset,
-            data: word,
-            beforeWord: beforeWord,
-          );
-          fimWord.add(tmpWord);
-          beforeWord = tmpWord;
-          currentOffset = tmpWord.end + 1;
-        } else {
-          currentOffset++;
-        }
+    final wordList = text.split(RegExp(r"\s|\n"));
+    for (final word in wordList) {
+      if (word.trim().isNotEmpty) {
+        final tmpWord = FimWord(
+          start: offset,
+          data: word,
+          beforeWord: beforeWord,
+        );
+        fimWord.add(tmpWord);
+        beforeWord = tmpWord;
+        offset = tmpWord.end + 2;
+      } else {
+        offset++;
       }
     }
-    fimWord = fimWord.nextWord!;
   }
-  FimWord fimWord = FimWord.empty();
 
-  FimWord? findWord(int offset) {
+  late String text;
+  late FimWord fimWord;
+
+  FimWord? findNextWord(int offset) {
     FimWord word = fimWord;
+    if (word.start > offset) {
+      return word;
+    }
     while (word.hasNext) {
-      if (word.containOffset(offset)) {
+      word = word.nextWord!;
+      if (word.start > offset) {
         return word;
       }
-      word = word.nextWord!;
     }
     return null;
   }
-}
 
-class FimWord {
-  FimWord({
-    required this.start,
-    required this.data,
-    this.nextWord,
-    this.beforeWord,
-    this.afterNewLine = false,
-  });
-  final int start;
-  int get end => start + data.length;
-  String data;
-  bool afterNewLine;
-  FimWord? nextWord;
-  FimWord? beforeWord;
-
-  bool get hasNext => nextWord != null;
-  bool get hasBefore => beforeWord != null;
-  void add(FimWord word) {
-    last().nextWord = word;
-  }
-
-  FimWord last() {
-    FimWord word = this;
+  FimWord? findBeforeWord(int offset) {
+    FimWord word = fimWord;
+    if (word.end < offset) {
+      return word;
+    }
     while (word.hasNext) {
       word = word.nextWord!;
+      if (word.end < offset) {
+        return word;
+      }
     }
-    return word;
+    return null;
   }
 
-  void changeLine() {
-    afterNewLine = true;
+  FimWord? findWord(int offset) {
+    FimWord word = fimWord;
+    if (word.containOffset(offset)) {
+      return word;
+    }
+    while (word.hasNext) {
+      word = word.nextWord!;
+      if (word.containOffset(offset)) {
+        return word;
+      }
+    }
+    return null;
   }
 
-  bool containOffset(int offset) {
-    return start <= offset && end >= offset;
+  // TODO: Optimize
+  void insertChar(int offset, String char) {
+    final newText = text.characters.toList();
+    newText.insert(offset, char);
+    print(newText.join());
+    _loadFimText(newText.join());
   }
 
-  factory FimWord.empty() {
-    return FimWord(
-      start: 0,
-      data: "",
-      afterNewLine: false,
-    );
+  // TODO: Optimize
+  void removeChar(int offset) {
+    final newText = text.characters.toList();
+    newText.removeAt(offset);
+    _loadFimText(newText.join());
   }
 }

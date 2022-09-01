@@ -3,6 +3,8 @@ part of intent;
 class NavigatorWordAction extends Action<NavigatorWordIntent> {
   NavigatorWordAction(this.controller);
   final FimController controller;
+  FimText get fimText => controller.fimText;
+  int get offset => controller.offset;
   @override
   void invoke(NavigatorWordIntent intent) {
     final front = intent.front;
@@ -18,30 +20,22 @@ class NavigatorWordAction extends Action<NavigatorWordIntent> {
     }
   }
 
-  void _jumpTail([int? caretOffset]) {
-    final int offset = caretOffset ?? controller.selection.baseOffset;
-    final text = controller.text;
-    final fimText = FimText(text);
-    FimWord? word = fimText.findWord(offset);
+  void _jumpTail() {
+    FimWord? word = fimText.findWord(offset) ?? fimText.findNextWord(offset);
     if (word == null) {
       return;
     }
-    if (word.end - 1 == offset) {
+    if (word.end == offset) {
       word = word.nextWord;
     }
     if (word == null) {
       return;
     }
-    controller.selection = controller.selection.copyWith(
-      baseOffset: word.end - 1,
-    );
+    _updateOffset(word.end);
   }
 
-  void _jumpBeforetHead([int? caretOffset]) {
-    final int offset = caretOffset ?? controller.selection.baseOffset;
-    final text = controller.text;
-    final fimText = FimText(text);
-    FimWord? word = fimText.findWord(offset);
+  void _jumpBeforetHead() {
+    FimWord? word = fimText.findWord(offset) ?? fimText.findBeforeWord(offset);
     if (word == null) {
       return;
     }
@@ -51,25 +45,25 @@ class NavigatorWordAction extends Action<NavigatorWordIntent> {
     if (word == null) {
       return;
     }
-    controller.selection = controller.selection.copyWith(
-      baseOffset: word.start,
-    );
+    _updateOffset(word.start);
   }
 
-  void _jumpNextHead([int? caretOffset]) {
-    final int offset = caretOffset ?? controller.selection.baseOffset;
-    final text = controller.text;
-    final fimText = FimText(text);
-    FimWord? word = fimText.findWord(offset);
+  void _jumpNextHead() {
+    FimWord? word = fimText.findNextWord(offset);
     if (word == null) {
       return;
     }
-    word = word.nextWord;
+
+    if (word.start == offset) {
+      word = word.nextWord;
+    }
     if (word == null) {
       return;
     }
-    controller.selection = controller.selection.copyWith(
-      baseOffset: word.start,
-    );
+    _updateOffset(word.start);
+  }
+
+  void _updateOffset(int offset) {
+    controller.offset = offset;
   }
 }

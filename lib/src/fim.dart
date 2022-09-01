@@ -2,6 +2,8 @@ import 'dart:math' as math;
 import 'package:fim/fim.dart';
 import 'package:fim/src/enum/word_postion.dart';
 import 'package:fim/src/intent/intent.dart';
+import 'package:fim/src/model/fim_text.dart';
+import 'package:fim/src/model/fim_value.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -18,8 +20,7 @@ class Fim extends StatefulWidget {
 }
 
 class _FimState extends State<Fim> {
-  final ValueNotifier<FimMode> modeNotifier = ValueNotifier(FimMode.command);
-  FimMode get mode => modeNotifier.value;
+  FimController get controller => widget.controller;
   final FocusNode focusNode = FocusNode();
   final ScrollController scrollController = ScrollController();
   bool isArrow(LogicalKeyboardKey key) {
@@ -27,7 +28,7 @@ class _FimState extends State<Fim> {
     return list.contains(key.keyId);
   }
 
-  Map<ShortcutActivator, Intent> _insertShortcuts() {
+  Map<ShortcutActivator, Intent> _insertShortcuts(FimMode mode) {
     if (!mode.isInsert) {
       return {};
     }
@@ -37,7 +38,7 @@ class _FimState extends State<Fim> {
     };
   }
 
-  Map<ShortcutActivator, Intent> _commandShortcuts() {
+  Map<ShortcutActivator, Intent> _commandShortcuts(FimMode mode) {
     if (!mode.isCommand) {
       return {};
     }
@@ -84,21 +85,21 @@ class _FimState extends State<Fim> {
       builder: (context, constraints) {
         return ColoredBox(
           color: Colors.black.withOpacity(0.1),
-          child: ValueListenableBuilder<FimMode>(
-            valueListenable: modeNotifier,
-            builder: (context, mode, _) {
+          child: ValueListenableBuilder<FimValue>(
+            valueListenable: controller,
+            builder: (context, value, _) {
+              final mode = value.mode;
               return Shortcuts(
                 shortcuts: {
                   ..._defaultShortcuts(),
-                  ..._insertShortcuts(),
-                  ..._commandShortcuts(),
+                  ..._insertShortcuts(mode),
+                  ..._commandShortcuts(mode),
                 },
                 child: Actions(
                   actions: {
-                    NavigatorWordIntent: NavigatorWordAction(widget.controller),
-                    ModeIntent: ModeAction(modeNotifier),
-                    NavigatorArrowIntent:
-                        NavigatorArrowAction(widget.controller),
+                    NavigatorWordIntent: NavigatorWordAction(controller),
+                    ModeIntent: ModeAction(controller),
+                    NavigatorArrowIntent: NavigatorArrowAction(controller),
                   },
                   child: Focus(
                     autofocus: true,
@@ -125,50 +126,41 @@ class _FimState extends State<Fim> {
                         final isBS = logicalKey == LogicalKeyboardKey.backspace;
                         final text = widget.controller.text;
                         final newText = text.characters.toList();
-                        int currentOffset =
-                            widget.controller.selection.baseOffset;
+                        int currentOffset = widget.controller.offset;
                         if (isBS) {
-                          newText.removeAt(currentOffset - 1);
-                          currentOffset--;
+                          controller.removeChar(currentOffset);
+                          // newText.removeAt(currentOffset - 1);
+                          // currentOffset--;
                         } else {
-                          newText.insert(currentOffset, keyLabel.toLowerCase());
-                          currentOffset++;
+                          controller.insertChar(
+                            currentOffset,
+                            keyLabel.toLowerCase(),
+                          );
+                          // newText.insert(currentOffset, keyLabel.toLowerCase());
+                          // currentOffset++;
                         }
                         widget.controller.value =
                             widget.controller.value.copyWith(
-                          text: newText.join(),
-                          selection: widget.controller.selection.copyWith(
-                            baseOffset: currentOffset,
-                          ),
+                          fimText: FimText(newText.join()),
+                          offset: currentOffset,
                         );
                       }
                       return KeyEventResult.ignored;
                     },
-                    child: ValueListenableBuilder<TextEditingValue>(
-                      valueListenable: widget.controller,
-                      builder: (context, value, _) {
-                        return SizedBox(
-                          width: constraints.maxWidth,
-                          height: constraints.maxHeight,
-                          child: SingleChildScrollView(
-                            child: SingleChildScrollView(
-                              scrollDirection: Axis.horizontal,
-                              child: _FimRenderObjectWidget(
-                                text: widget.controller.buildTextSpan(
-                                  context: context,
-                                  withComposing: true,
-                                ),
-                                lineNumber: widget.lineNumber,
-                                caretOffset: value.selection.baseOffset,
-                                mode: mode,
-                                onTaexPainter: (tp) {
-                                  widget.controller.textPainter = tp;
-                                },
-                              ),
-                            ),
+                    child: SizedBox(
+                      width: constraints.maxWidth,
+                      height: constraints.maxHeight,
+                      child: SingleChildScrollView(
+                        child: SingleChildScrollView(
+                          scrollDirection: Axis.horizontal,
+                          child: _FimRenderObjectWidget(
+                            text: controller.buildTextSpan(),
+                            lineNumber: widget.lineNumber,
+                            caretOffset: value.offset,
+                            mode: mode,
                           ),
-                        );
-                      },
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -188,14 +180,12 @@ class _FimRenderObjectWidget extends LeafRenderObjectWidget {
     required this.lineNumber,
     required this.caretOffset,
     required this.mode,
-    required this.onTaexPainter,
   }) : super(key: key);
 
   final InlineSpan? text;
   final bool lineNumber;
   final int caretOffset;
   final FimMode mode;
-  final Function(TextPainter textPainter) onTaexPainter;
   @override
   RenderFim createRenderObject(BuildContext context) {
     return RenderFim(
@@ -203,7 +193,6 @@ class _FimRenderObjectWidget extends LeafRenderObjectWidget {
       lineNumber: lineNumber,
       caretOffset: caretOffset,
       mode: mode,
-      onTaexPainter: onTaexPainter,
     );
   }
 
@@ -223,7 +212,6 @@ class RenderFim extends RenderBox {
     required bool lineNumber,
     required int caretOffset,
     required FimMode mode,
-    required this.onTaexPainter,
   })  : _mode = mode,
         _caretOffset = caretOffset,
         _lineNumber = lineNumber,
@@ -231,8 +219,6 @@ class RenderFim extends RenderBox {
           text: text,
           textDirection: TextDirection.ltr,
         );
-
-  final Function(TextPainter textPainter) onTaexPainter;
 
   late FimMode _mode;
   FimMode get mode => _mode;
@@ -286,7 +272,6 @@ class RenderFim extends RenderBox {
 
   void _layoutTextPainter() {
     _textPainter.layout();
-    onTaexPainter(_textPainter);
   }
 
   @override

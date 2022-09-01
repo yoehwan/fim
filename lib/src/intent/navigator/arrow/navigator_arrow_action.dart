@@ -3,8 +3,7 @@ part of intent;
 class NavigatorArrowAction extends Action<NavigatorArrowIntent> {
   NavigatorArrowAction(this.controller);
   final FimController controller;
-  TextSelection get selection => controller.selection;
-  int get offset => selection.baseOffset;
+  int get offset => controller.offset;
   List<String> get lineList {
     return controller.text.split("\n");
   }
@@ -62,17 +61,15 @@ class NavigatorArrowAction extends Action<NavigatorArrowIntent> {
       currentOffset: currentOffset,
     );
     if (lineNumberIndex == 0) {
-      controller.selection = selection.copyWith(baseOffset: 0);
+      controller.offset = 0;
       return;
     }
     final beforeLineTextLen = list[lineNumberIndex - 1].length;
-    controller.selection = TextSelection.collapsed(
-      offset: currentOffset -
-          normalizedOffset -
-          beforeLineTextLen -
-          1 +
-          math.min(normalizedOffset, beforeLineTextLen),
-    );
+    _updateOffset(currentOffset -
+        normalizedOffset -
+        beforeLineTextLen -
+        1 +
+        math.min(normalizedOffset, beforeLineTextLen));
   }
 
   void _down() {
@@ -86,15 +83,14 @@ class NavigatorArrowAction extends Action<NavigatorArrowIntent> {
       currentOffset: currentOffset,
     );
     if (lineNumberIndex == list.length - 1) {
-      controller.selection =
-          selection.copyWith(baseOffset: controller.text.length);
+      _updateOffset(controller.text.length);
       return;
     }
     final nextLineTextLen = list[lineNumberIndex + 1].length;
-    controller.selection = TextSelection.collapsed(
-      offset: currentOffset -
+    _updateOffset(
+      currentOffset -
           normalizedOffset +
-          currentLineTextLen+
+          currentLineTextLen +
           1 +
           math.min(normalizedOffset, nextLineTextLen),
     );
@@ -104,17 +100,17 @@ class NavigatorArrowAction extends Action<NavigatorArrowIntent> {
     if (offset <= 0) {
       return;
     }
-    controller.selection = selection.copyWith(
-      baseOffset: offset - 1,
-    );
+    _updateOffset(offset - 1);
   }
 
   void _right() {
     if (offset == controller.text.length) {
       return;
     }
-    controller.selection = selection.copyWith(
-      baseOffset: offset + 1,
-    );
+    _updateOffset(offset + 1);
+  }
+
+  void _updateOffset(int offset) {
+    controller.offset = offset;
   }
 }
