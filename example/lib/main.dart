@@ -30,16 +30,25 @@ class FimExample extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       body: Center(
-        child: SizedBox(
-          width: 200,
-          height: 200,
-          child: Fim(
-            controller: controller,
-            lineNumber: true,
-          ),
+        child: Column(
+          mainAxisAlignment:MainAxisAlignment.center,
+          children: [
+            SizedBox(
+              height: 200,
+              child: Fim(
+                controller: controller,
+                lineNumber: true,
+              ),
+            ),
+            ValueListenableBuilder(
+              valueListenable: controller,
+              builder: (context, value, _) {
+                return Text("${controller.mode}");
+              },
+            ),
+          ],
         ),
       ),
     );
   }
 }
-
