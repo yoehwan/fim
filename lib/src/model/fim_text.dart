@@ -1,16 +1,11 @@
 library fim_text;
 
-import 'package:flutter/widgets.dart';
+import 'package:equatable/equatable.dart';
 
 part 'fim_word.dart';
 
-class FimText {
-  FimText(this.text) {
-    _loadFimText(text);
-  }
-
-  void _loadFimText(String text) {
-    this.text = text;
+class FimText with EquatableMixin {
+  FimText({this.text = ""}) {
     fimWord = FimWord.empty();
     int offset = 0;
     FimWord beforeWord = fimWord;
@@ -30,8 +25,7 @@ class FimText {
       }
     }
   }
-
-  late String text;
+  final String text;
   late FimWord fimWord;
 
   FimWord? findNextWord(int offset) {
@@ -49,12 +43,12 @@ class FimText {
   }
 
   FimWord? findBeforeWord(int offset) {
-    FimWord word = fimWord;
+    FimWord word = fimWord.last();
     if (word.end < offset) {
       return word;
     }
-    while (word.hasNext) {
-      word = word.nextWord!;
+    while (word.hasBefore) {
+      word = word.beforeWord!;
       if (word.end < offset) {
         return word;
       }
@@ -75,4 +69,7 @@ class FimText {
     }
     return null;
   }
+
+  @override
+  List<Object?> get props => [text];
 }

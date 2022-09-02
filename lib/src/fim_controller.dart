@@ -3,51 +3,64 @@ import 'package:fim/src/model/fim_text.dart';
 import 'package:fim/src/model/fim_value.dart';
 import 'package:flutter/material.dart';
 
-const testText = "aa bb cc dd ee \naa bb dfdf   er ";
-
 class FimController extends ValueNotifier<FimValue> {
-  FimController({
-    String? text,
-  }) : super(
+  FimController({String text = ""})
+      : super(
           FimValue(
-            fimText: FimText(text ?? testText),
-            offset: 0,
-            mode: FimMode.insert,
+            fimText: FimText(text: text),
           ),
         );
+
   FimText get fimText => value.fimText;
-  String get text => value.fimText.text;
-  int get offset => value.offset;
-  set offset(int newOffset) {
-    if (value.offset == newOffset) {
+  set fimText(FimText newValue) {
+    if (value.fimText == newValue) {
       return;
     }
-    value = value.copyWith(offset: newOffset);
+    value = value.copyWith(fimText: newValue);
   }
 
+  String get text => fimText.text;
+
   FimMode get mode => value.mode;
-  set mode(FimMode newMode) {
-    if (value.mode == newMode) {
+  set mode(FimMode newValue) {
+    if (value.mode == newValue) {
       return;
     }
-    value = value.copyWith(mode: newMode);
+
+    value = value.copyWith(
+      mode: newValue,
+      selection: TextSelection.collapsed(offset: selection.baseOffset),
+    );
+  }
+
+  TextSelection get selection => value.selection;
+  set selection(TextSelection newValue) {
+    if (value.selection == newValue) {
+      return;
+    }
+    value = value.copyWith(selection: newValue);
   }
 
   void insertChar(int offset, String char) {
     final newText = text.characters.toList();
     newText.insert(offset, char);
     value = value.copyWith(
-      fimText: FimText(newText.join()),
-      offset: offset + 1,
+      fimText: FimText(text: newText.join()),
+      selection: TextSelection.collapsed(offset: offset + 1),
     );
   }
 
-  void removeChar(int offset) {
-    final newText = text.characters.toList();
-    newText.removeAt(offset);
+  void removeSelection(TextSelection removeSelection) {
+    final baseOffset = removeSelection.baseOffset;
+    if (baseOffset == 0) {
+      return;
+    }
     value = value.copyWith(
-      fimText: FimText(newText.join()),
-      offset: offset - 1,
+      fimText: FimText(
+        text:
+            removeSelection.textBefore(text) + removeSelection.textAfter(text),
+      ),
+      selection: TextSelection.collapsed(offset: baseOffset),
     );
   }
 

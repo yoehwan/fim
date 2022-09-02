@@ -1,35 +1,38 @@
 import 'dart:math' as math;
+import 'dart:ui' as ui;
 import 'package:fim/fim.dart';
 import 'package:fim/src/enum/word_postion.dart';
 import 'package:fim/src/intent/intent.dart';
-import 'package:fim/src/model/fim_text.dart';
 import 'package:fim/src/model/fim_value.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
 class Fim extends StatefulWidget {
+  final FimController controller;
+  final bool lineNumber;
   const Fim({
     super.key,
     required this.controller,
     required this.lineNumber,
   });
-  final FimController controller;
-  final bool lineNumber;
   @override
   State<Fim> createState() => _FimState();
 }
 
 class _FimState extends State<Fim> {
-  FimController get controller => widget.controller;
   final FocusNode focusNode = FocusNode();
   final ScrollController scrollController = ScrollController();
+  FimController get controller => widget.controller;
+  FimMode get mode => controller.mode;
+
   bool isArrow(LogicalKeyboardKey key) {
     final list = [0x00100000301, 0x00100000302, 0x00100000303, 0x00100000304];
     return list.contains(key.keyId);
   }
 
-  Map<ShortcutActivator, Intent> _insertShortcuts(FimMode mode) {
-    if (!mode.isInsert) {
+  Map<ShortcutActivator, Intent> _visualShortcuts() {
+    if (!mode.isVisual) {
       return {};
     }
     return {
@@ -38,13 +41,15 @@ class _FimState extends State<Fim> {
     };
   }
 
-  Map<ShortcutActivator, Intent> _commandShortcuts(FimMode mode) {
+  Map<ShortcutActivator, Intent> _commandShortcuts() {
     if (!mode.isCommand) {
       return {};
     }
     return {
       const SingleActivator(LogicalKeyboardKey.keyA):
           const ModeIntent(FimMode.insert),
+      const SingleActivator(LogicalKeyboardKey.keyV):
+          const ModeIntent(FimMode.visual),
       // Direction
       const SingleActivator(LogicalKeyboardKey.keyH):
           const NavigatorArrowIntent(TraversalDirection.left),
@@ -79,6 +84,16 @@ class _FimState extends State<Fim> {
     };
   }
 
+  Map<ShortcutActivator, Intent> _insertShortcuts() {
+    if (!mode.isInsert) {
+      return {};
+    }
+    return {
+      const SingleActivator(LogicalKeyboardKey.escape):
+          const ModeIntent(FimMode.command),
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
@@ -92,8 +107,9 @@ class _FimState extends State<Fim> {
               return Shortcuts(
                 shortcuts: {
                   ..._defaultShortcuts(),
-                  ..._insertShortcuts(mode),
-                  ..._commandShortcuts(mode),
+                  ..._insertShortcuts(),
+                  ..._commandShortcuts(),
+                  ..._visualShortcuts(),
                 },
                 child: Actions(
                   actions: {
@@ -123,14 +139,17 @@ class _FimState extends State<Fim> {
                         if (logicalKey == LogicalKeyboardKey.enter) {
                           keyLabel = "\n";
                         }
-                        print(logicalKey);
                         final isBS = logicalKey == LogicalKeyboardKey.backspace;
-                        int currentOffset = widget.controller.offset;
+                        TextSelection selection = widget.controller.selection;
                         if (isBS) {
-                          controller.removeChar(currentOffset);
+                          controller.removeSelection(
+                            selection.copyWith(
+                              baseOffset: selection.baseOffset - 1,
+                            ),
+                          );
                         } else {
                           controller.insertChar(
-                            currentOffset,
+                            selection.baseOffset,
                             keyLabel.toLowerCase(),
                           );
                         }
@@ -146,8 +165,8 @@ class _FimState extends State<Fim> {
                           child: _FimRenderObjectWidget(
                             text: controller.buildTextSpan(),
                             lineNumber: widget.lineNumber,
-                            caretOffset: value.offset,
                             mode: mode,
+                            selection: value.selection,
                           ),
                         ),
                       ),
@@ -168,29 +187,28 @@ class _FimRenderObjectWidget extends LeafRenderObjectWidget {
     Key? key,
     required this.text,
     required this.lineNumber,
-    required this.caretOffset,
     required this.mode,
+    required this.selection,
   }) : super(key: key);
-
   final InlineSpan? text;
   final bool lineNumber;
-  final int caretOffset;
   final FimMode mode;
+  final TextSelection selection;
   @override
   RenderFim createRenderObject(BuildContext context) {
     return RenderFim(
       text: text,
       lineNumber: lineNumber,
-      caretOffset: caretOffset,
       mode: mode,
+      selection: selection,
     );
   }
 
   @override
   void updateRenderObject(BuildContext context, RenderFim renderObject) {
     renderObject
+      ..selection = selection
       ..mode = mode
-      ..caretOffset = caretOffset
       ..text = text
       ..lineNumber = lineNumber;
   }
@@ -200,15 +218,45 @@ class RenderFim extends RenderBox {
   RenderFim({
     InlineSpan? text,
     required bool lineNumber,
-    required int caretOffset,
     required FimMode mode,
-  })  : _mode = mode,
-        _caretOffset = caretOffset,
+    required TextSelection selection,
+  })  : _selection = selection,
+        _mode = mode,
         _lineNumber = lineNumber,
         _textPainter = TextPainter(
           text: text,
           textDirection: TextDirection.ltr,
         );
+
+  late TextSelection _selection;
+  TextSelection get selection => _selection;
+  set selection(TextSelection value) {
+    if (_selection == value) {
+      return;
+    }
+    _selection = value;
+    markNeedsPaint();
+  }
+
+  Rect get caretRect {
+    return Rect.fromLTWH(
+      0,
+      0,
+      mode.isInsert ? 2 : 8,
+      _textPainter.preferredLineHeight,
+    );
+  }
+
+  late bool _lineNumber;
+  bool get lineNumber => _lineNumber;
+
+  set lineNumber(bool value) {
+    if (_lineNumber == value) {
+      return;
+    }
+    _lineNumber = value;
+    markNeedsPaint();
+  }
 
   late FimMode _mode;
   FimMode get mode => _mode;
@@ -220,35 +268,7 @@ class RenderFim extends RenderBox {
     markNeedsPaint();
   }
 
-  Rect get caretRect => Rect.fromLTWH(
-      0, 0, mode.isInsert ? 2 : 8, _textPainter.preferredLineHeight);
-  late int _caretOffset;
-  int get caretOffset => _caretOffset;
-  set caretOffset(int value) {
-    if (_caretOffset == value) {
-      return;
-    }
-    _caretOffset = value;
-    markNeedsPaint();
-  }
-
-  double get _lineNumberWidth {
-    if (lineNumber) {
-      return 30.0;
-    }
-    return 0;
-  }
-
-  late bool _lineNumber;
-  bool get lineNumber => _lineNumber;
-  set lineNumber(bool value) {
-    if (_lineNumber == value) {
-      return;
-    }
-    _lineNumber = value;
-    markNeedsPaint();
-  }
-
+  final TextPainter _textPainter;
   InlineSpan? get text => _textPainter.text;
   set text(InlineSpan? value) {
     if (text == value) {
@@ -258,18 +278,39 @@ class RenderFim extends RenderBox {
     markNeedsLayout();
   }
 
-  final TextPainter _textPainter;
+  double get _lineNumberWidth {
+    if (lineNumber) {
+      return 30.0;
+    }
+    return 0;
+  }
 
   void _layoutTextPainter() {
     _textPainter.layout();
   }
 
-  @override
-  void performLayout() {
-    _layoutTextPainter();
-    size = Size(
-      _textPainter.width + _lineNumberWidth + caretRect.width,
-      _textPainter.height,
+  void _paintCaret(PaintingContext context, Offset offset) {
+    final List<TextBox> boxList = _textPainter.getBoxesForSelection(selection);
+    final editorOffset = offset.translate(_lineNumberWidth, 0);
+
+    final caretSize = caretRect.size.bottomRight(Offset.zero);
+    for (final box in boxList) {
+      final rect = box.toRect().shift(editorOffset);
+      context.canvas.drawRect(
+        rect,
+        Paint()..color = Colors.red.withOpacity(0.6),
+      );
+    }
+    final Offset extentOffset = _textPainter.getOffsetForCaret(
+      TextPosition(offset: selection.extentOffset),
+      caretRect,
+    );
+    context.canvas.drawRect(
+      Rect.fromPoints(
+        editorOffset + extentOffset,
+        editorOffset + extentOffset + caretSize,
+      ),
+      Paint()..color = Colors.red.withOpacity(0.6),
     );
   }
 
@@ -298,20 +339,12 @@ class RenderFim extends RenderBox {
     _textPainter.paint(context.canvas, editorOffset);
   }
 
-  void _paintCaret(PaintingContext context, Offset offset) {
-    final editorOffset = offset.translate(_lineNumberWidth, 0);
-    final localOffset = _textPainter.getOffsetForCaret(
-      TextPosition(offset: _caretOffset),
-      caretRect,
-    );
-    context.canvas.drawRect(
-      Rect.fromLTWH(
-        localOffset.dx + editorOffset.dx,
-        localOffset.dy + editorOffset.dy,
-        caretRect.width,
-        caretRect.height,
-      ),
-      Paint()..color = Colors.red.withOpacity(0.6),
+  @override
+  void performLayout() {
+    _layoutTextPainter();
+    size = Size(
+      _textPainter.width + _lineNumberWidth + caretRect.width,
+      _textPainter.height,
     );
   }
 

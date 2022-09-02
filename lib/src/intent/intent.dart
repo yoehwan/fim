@@ -1,5 +1,6 @@
 library intent;
 
+import 'dart:convert';
 import 'dart:math' as math;
 import 'package:fim/src/enum/mode.dart';
 import 'package:fim/src/enum/word_postion.dart';

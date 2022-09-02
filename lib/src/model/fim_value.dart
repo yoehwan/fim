@@ -1,32 +1,38 @@
+import 'package:equatable/equatable.dart';
 import 'package:fim/src/enum/mode.dart';
 import 'package:fim/src/model/fim_text.dart';
+import 'package:flutter/material.dart';
 
-class FimValue {
-  FimValue({
-    required this.offset,
+class FimValue extends Equatable {
+  const FimValue({
     required this.fimText,
-    required this.mode,
+    this.mode = FimMode.insert,
+    this.selection = const TextSelection.collapsed(offset: 0),
   });
-  final int offset;
   final FimText fimText;
   final FimMode mode;
+  final TextSelection selection;
+
   FimValue copyWith({
-    int? offset,
     FimText? fimText,
     FimMode? mode,
+    TextSelection? selection,
   }) {
     return FimValue(
-      offset: offset ?? this.offset,
       fimText: fimText ?? this.fimText,
       mode: mode ?? this.mode,
+      selection: selection ?? this.selection,
     );
   }
 
-  Map<String,dynamic> toMap(){
+  Map<String, dynamic> toMap() {
     return {
-      "offset":offset,
-      "fimText":fimText,
-      "mode":mode,
+      "fimText": fimText,
+      "mode": mode,
+      "selection": selection,
     };
   }
+
+  @override
+  List<Object?> get props => [fimText, mode, selection];
 }

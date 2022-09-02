@@ -4,7 +4,7 @@ class NavigatorWordAction extends Action<NavigatorWordIntent> {
   NavigatorWordAction(this.controller);
   final FimController controller;
   FimText get fimText => controller.fimText;
-  int get offset => controller.offset;
+  int get caretOffset => controller.selection.baseOffset;
   @override
   void invoke(NavigatorWordIntent intent) {
     final front = intent.front;
@@ -21,11 +21,12 @@ class NavigatorWordAction extends Action<NavigatorWordIntent> {
   }
 
   void _jumpTail() {
-    FimWord? word = fimText.findWord(offset) ?? fimText.findNextWord(offset);
+    FimWord? word =
+        fimText.findWord(caretOffset) ?? fimText.findNextWord(caretOffset);
     if (word == null) {
       return;
     }
-    if (word.end == offset) {
+    if (word.end == caretOffset) {
       word = word.nextWord;
     }
     if (word == null) {
@@ -35,11 +36,12 @@ class NavigatorWordAction extends Action<NavigatorWordIntent> {
   }
 
   void _jumpBeforetHead() {
-    FimWord? word = fimText.findWord(offset) ?? fimText.findBeforeWord(offset);
+    FimWord? word =
+        fimText.findWord(caretOffset) ?? fimText.findBeforeWord(caretOffset);
     if (word == null) {
       return;
     }
-    if (word.start == offset) {
+    if (word.start == caretOffset) {
       word = word.beforeWord;
     }
     if (word == null) {
@@ -49,12 +51,12 @@ class NavigatorWordAction extends Action<NavigatorWordIntent> {
   }
 
   void _jumpNextHead() {
-    FimWord? word = fimText.findNextWord(offset);
+    FimWord? word = fimText.findNextWord(caretOffset);
     if (word == null) {
       return;
     }
 
-    if (word.start == offset) {
+    if (word.start == caretOffset) {
       word = word.nextWord;
     }
     if (word == null) {
@@ -64,6 +66,6 @@ class NavigatorWordAction extends Action<NavigatorWordIntent> {
   }
 
   void _updateOffset(int offset) {
-    controller.offset = offset;
+    controller.selection = controller.selection.copyWith(baseOffset: offset);
   }
 }

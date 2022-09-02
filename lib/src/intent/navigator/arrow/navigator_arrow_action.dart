@@ -3,15 +3,17 @@ part of intent;
 class NavigatorArrowAction extends Action<NavigatorArrowIntent> {
   NavigatorArrowAction(this.controller);
   final FimController controller;
-  int get offset => controller.offset;
+  TextSelection get selection => controller.selection;
+  FimMode get mode => controller.mode;
+  String get text => controller.text;
   List<String> get lineList {
-    return controller.text.split("\n");
+    return text.split("\n");
   }
 
   int get currentLineIndex {
     final list = lineList;
     final listLen = list.length;
-    final currentOffset = offset;
+    final currentOffset = selection.baseOffset;
     int total = 0;
     for (int index = 0; index < listLen; index++) {
       final text = list[index];
@@ -53,64 +55,93 @@ class NavigatorArrowAction extends Action<NavigatorArrowIntent> {
 
   void _up() {
     final list = lineList;
-    final currentOffset = offset;
+    final currentOffset = selection;
     final lineNumberIndex = currentLineIndex;
     final normalizedOffset = _computeNormalizedOffset(
       lineList: list,
       currentLineIndex: lineNumberIndex,
-      currentOffset: currentOffset,
+      currentOffset: selection.baseOffset,
     );
     if (lineNumberIndex == 0) {
-      controller.offset = 0;
+      controller.selection = const TextSelection.collapsed(offset: 0);
       return;
     }
     final beforeLineTextLen = list[lineNumberIndex - 1].length;
-    _updateOffset(currentOffset -
+    final int newOffset = currentOffset.baseOffset -
         normalizedOffset -
         beforeLineTextLen -
         1 +
-        math.min(normalizedOffset, beforeLineTextLen));
+        math.min(normalizedOffset, beforeLineTextLen);
+    _updatSelection(TextSelection.collapsed(offset: newOffset));
   }
 
   void _down() {
     final list = lineList;
-    final currentOffset = offset;
+    final currentOffset = selection;
     final lineNumberIndex = currentLineIndex;
     final currentLineTextLen = list[lineNumberIndex].length;
     final normalizedOffset = _computeNormalizedOffset(
       lineList: list,
       currentLineIndex: lineNumberIndex,
-      currentOffset: currentOffset,
+      currentOffset: currentOffset.baseOffset,
     );
     if (lineNumberIndex == list.length - 1) {
-      _updateOffset(controller.text.length);
+      _updatSelection(
+        selection.copyWith(
+          baseOffset: text.length,
+        ),
+      );
       return;
     }
     final nextLineTextLen = list[lineNumberIndex + 1].length;
-    _updateOffset(
-      currentOffset -
-          normalizedOffset +
-          currentLineTextLen +
-          1 +
-          math.min(normalizedOffset, nextLineTextLen),
-    );
+    final int newOffset = currentOffset.baseOffset -
+        normalizedOffset +
+        currentLineTextLen +
+        1 +
+        math.min(normalizedOffset, nextLineTextLen);
+    _updatSelection(TextSelection.collapsed(offset: newOffset));
   }
 
   void _left() {
-    if (offset <= 0) {
+    final baseOffset = selection.baseOffset;
+    final extentOffset = selection.extentOffset;
+    if (baseOffset <= 0) {
       return;
     }
-    _updateOffset(offset - 1);
+    TextSelection tmpSelection;
+
+    if (mode.isVisual) {
+      tmpSelection = selection.copyWith(
+        extentOffset: extentOffset - 1,
+      );
+    } else {
+      tmpSelection = TextSelection.collapsed(
+        offset: baseOffset - 1,
+      );
+    }
+    _updatSelection(tmpSelection);
   }
 
   void _right() {
-    if (offset == controller.text.length) {
+    final baseOffset = selection.baseOffset;
+    final extentOffset = selection.extentOffset;
+    if (baseOffset >= text.length || extentOffset >= text.length) {
       return;
     }
-    _updateOffset(offset + 1);
+    TextSelection tmpSelection;
+    if (mode.isVisual) {
+      tmpSelection = selection.copyWith(
+        extentOffset: extentOffset + 1,
+      );
+    } else {
+      tmpSelection = TextSelection.collapsed(
+        offset: baseOffset + 1,
+      );
+    }
+    _updatSelection(tmpSelection);
   }
 
-  void _updateOffset(int offset) {
-    controller.offset = offset;
+  void _updatSelection(TextSelection selection) {
+    controller.selection = selection;
   }
 }

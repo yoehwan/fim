@@ -1,6 +1,6 @@
 part of fim_text;
 
-class FimWord {
+class FimWord with EquatableMixin {
   FimWord({
     required this.start,
     required this.data,
@@ -48,4 +48,7 @@ class FimWord {
       "beforeWord": beforeWord,
     };
   }
+
+  @override
+  List<Object?> get props => [start, end, data, nextWord, beforeWord];
 }
