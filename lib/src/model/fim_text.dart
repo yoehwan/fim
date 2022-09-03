@@ -1,71 +1,103 @@
 library fim_text;
 
+import 'dart:collection';
+
 import 'package:equatable/equatable.dart';
 
 part 'fim_word.dart';
+part 'fim_line.dart';
 
 class FimText with EquatableMixin {
   FimText({this.text = ""}) {
-    fimWord = FimWord.empty();
     int offset = 0;
-    FimWord beforeWord = fimWord;
-    final wordList = text.split(RegExp(r"\s|\n"));
-    for (final word in wordList) {
-      if (word.trim().isNotEmpty) {
-        final tmpWord = FimWord(
-          start: offset,
-          data: word,
-          beforeWord: beforeWord,
-        );
-        fimWord.add(tmpWord);
-        beforeWord = tmpWord;
-        offset = tmpWord.end + 2;
-      } else {
-        offset++;
+    int lineOffset = 0;
+    final lineList = text.split(RegExp(r"\n"));
+    for (int index = 0; index < lineList.length; index++) {
+      final lineNumber = index + 1;
+      final line = lineList[index];
+      final tmpLine = FimLine(
+        line: lineNumber,
+        start: lineOffset + index,
+        data: line,
+      );
+      fimLine.add(tmpLine);
+      lineOffset += line.length;
+      final wordList = line.split(RegExp(r"\s"));
+      for (final word in wordList) {
+        if (word.trim().isNotEmpty) {
+          final tmpWord = FimWord(
+            line: lineNumber,
+            start: offset,
+            data: word,
+          );
+          fimWord.add(tmpWord);
+          offset = tmpWord.end + 2;
+        } else {
+          offset++;
+        }
       }
     }
   }
+  final LinkedList<FimLine> fimLine = LinkedList();
+  final LinkedList<FimWord> fimWord = LinkedList();
   final String text;
-  late FimWord fimWord;
 
   FimWord? findNextWord(int offset) {
-    FimWord word = fimWord;
+    FimWord? word = fimWord.first;
     if (word.start > offset) {
       return word;
     }
-    while (word.hasNext) {
-      word = word.nextWord!;
+    word = word.next;
+    while (word != null) {
       if (word.start > offset) {
         return word;
       }
+      word = word.next;
     }
     return null;
   }
 
   FimWord? findBeforeWord(int offset) {
-    FimWord word = fimWord.last();
+    FimWord? word = fimWord.last;
     if (word.end < offset) {
       return word;
     }
-    while (word.hasBefore) {
-      word = word.beforeWord!;
+    word = word.previous;
+    while (word != null) {
       if (word.end < offset) {
         return word;
       }
+      word = word.previous;
     }
     return null;
   }
 
   FimWord? findWord(int offset) {
-    FimWord word = fimWord;
+    FimWord? word = fimWord.first;
     if (word.containOffset(offset)) {
       return word;
     }
-    while (word.hasNext) {
-      word = word.nextWord!;
+    word = word.next;
+    while (word != null) {
       if (word.containOffset(offset)) {
         return word;
       }
+      word = word.next;
+    }
+    return null;
+  }
+
+  FimLine? findLine(int offset) {
+    FimLine? line = fimLine.first;
+    if (line.containOffset(offset)) {
+      return line;
+    }
+    line = line.next;
+    while (line != null) {
+      if (line.containOffset(offset)) {
+        return line;
+      }
+      line = line.next;
     }
     return null;
   }

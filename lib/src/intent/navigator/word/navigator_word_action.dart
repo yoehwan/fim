@@ -3,8 +3,11 @@ part of intent;
 class NavigatorWordAction extends Action<NavigatorWordIntent> {
   NavigatorWordAction(this.controller);
   final FimController controller;
+  FimMode get mode => controller.mode;
+  TextSelection get selection => controller.selection;
+  int get caretOffset =>
+      !mode.isVisual ? selection.baseOffset : selection.extentOffset;
   FimText get fimText => controller.fimText;
-  int get caretOffset => controller.selection.baseOffset;
   @override
   void invoke(NavigatorWordIntent intent) {
     final front = intent.front;
@@ -27,12 +30,23 @@ class NavigatorWordAction extends Action<NavigatorWordIntent> {
       return;
     }
     if (word.end == caretOffset) {
-      word = word.nextWord;
+      word = word.next;
     }
     if (word == null) {
       return;
     }
-    _updateOffset(word.end);
+    TextSelection tmpSelection;
+
+    if (mode.isVisual) {
+      tmpSelection = selection.copyWith(
+        extentOffset: word.end,
+      );
+    } else {
+      tmpSelection = TextSelection.collapsed(
+        offset: word.end,
+      );
+    }
+    _updateSelection(tmpSelection);
   }
 
   void _jumpBeforetHead() {
@@ -42,12 +56,23 @@ class NavigatorWordAction extends Action<NavigatorWordIntent> {
       return;
     }
     if (word.start == caretOffset) {
-      word = word.beforeWord;
+      word = word.previous;
     }
     if (word == null) {
       return;
     }
-    _updateOffset(word.start);
+    TextSelection tmpSelection;
+
+    if (mode.isVisual) {
+      tmpSelection = selection.copyWith(
+        extentOffset: word.start,
+      );
+    } else {
+      tmpSelection = TextSelection.collapsed(
+        offset: word.start,
+      );
+    }
+    _updateSelection(tmpSelection);
   }
 
   void _jumpNextHead() {
@@ -57,15 +82,26 @@ class NavigatorWordAction extends Action<NavigatorWordIntent> {
     }
 
     if (word.start == caretOffset) {
-      word = word.nextWord;
+      word = word.next;
     }
     if (word == null) {
       return;
     }
-    _updateOffset(word.start);
+    TextSelection tmpSelection;
+
+    if (mode.isVisual) {
+      tmpSelection = selection.copyWith(
+        extentOffset: word.start,
+      );
+    } else {
+      tmpSelection = TextSelection.collapsed(
+        offset: word.start,
+      );
+    }
+    _updateSelection(tmpSelection);
   }
 
-  void _updateOffset(int offset) {
-    controller.selection = controller.selection.copyWith(baseOffset: offset);
+  void _updateSelection(TextSelection selection) {
+    controller.selection = selection;
   }
 }

@@ -1,11 +1,9 @@
 import 'dart:math' as math;
-import 'dart:ui' as ui;
 import 'package:fim/fim.dart';
 import 'package:fim/src/enum/word_postion.dart';
 import 'package:fim/src/intent/intent.dart';
 import 'package:fim/src/model/fim_value.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 
 class Fim extends StatefulWidget {
@@ -38,6 +36,23 @@ class _FimState extends State<Fim> {
     return {
       const SingleActivator(LogicalKeyboardKey.escape):
           const ModeIntent(FimMode.command),
+      // Direction
+      const SingleActivator(LogicalKeyboardKey.keyH):
+          const NavigatorArrowIntent(TraversalDirection.left),
+      const SingleActivator(LogicalKeyboardKey.keyL):
+          const NavigatorArrowIntent(TraversalDirection.right),
+      const SingleActivator(LogicalKeyboardKey.keyJ):
+          const NavigatorArrowIntent(TraversalDirection.down),
+      const SingleActivator(LogicalKeyboardKey.keyK):
+          const NavigatorArrowIntent(TraversalDirection.up),
+
+      // Navigator
+      const SingleActivator(LogicalKeyboardKey.keyE):
+          const NavigatorWordIntent(front: true, wordPostion: WordPostion.tail),
+      const SingleActivator(LogicalKeyboardKey.keyW):
+          const NavigatorWordIntent(front: true, wordPostion: WordPostion.head),
+      const SingleActivator(LogicalKeyboardKey.keyB): const NavigatorWordIntent(
+          front: false, wordPostion: WordPostion.head),
     };
   }
 
@@ -47,6 +62,8 @@ class _FimState extends State<Fim> {
     }
     return {
       const SingleActivator(LogicalKeyboardKey.keyA):
+          const ModeIntent(FimMode.insert, after: true),
+      const SingleActivator(LogicalKeyboardKey.keyI):
           const ModeIntent(FimMode.insert),
       const SingleActivator(LogicalKeyboardKey.keyV):
           const ModeIntent(FimMode.visual),
@@ -67,6 +84,12 @@ class _FimState extends State<Fim> {
           const NavigatorWordIntent(front: true, wordPostion: WordPostion.head),
       const SingleActivator(LogicalKeyboardKey.keyB): const NavigatorWordIntent(
           front: false, wordPostion: WordPostion.head),
+
+      // Line
+      const SingleActivator(LogicalKeyboardKey.keyO):
+          const NewLineIntent(front: true),
+      const SingleActivator(LogicalKeyboardKey.keyO, shift: true):
+          const NewLineIntent(front: false)
     };
   }
 
@@ -113,9 +136,10 @@ class _FimState extends State<Fim> {
                 },
                 child: Actions(
                   actions: {
-                    NavigatorWordIntent: NavigatorWordAction(controller),
                     ModeIntent: ModeAction(controller),
+                    NavigatorWordIntent: NavigatorWordAction(controller),
                     NavigatorArrowIntent: NavigatorArrowAction(controller),
+                    NewLineIntent: NewLineAction(controller),
                   },
                   child: Focus(
                     autofocus: true,
@@ -128,6 +152,7 @@ class _FimState extends State<Fim> {
                       }
                       if (mode.isInsert) {
                         final logicalKey = event.logicalKey;
+                        String? char = event.character;
                         if (isArrow(logicalKey) ||
                             logicalKey == LogicalKeyboardKey.controlLeft) {
                           return KeyEventResult.ignored;
@@ -148,10 +173,15 @@ class _FimState extends State<Fim> {
                             ),
                           );
                         } else {
-                          controller.insertChar(
-                            selection.baseOffset,
-                            keyLabel.toLowerCase(),
-                          );
+                          if (char != null) {
+                            if (event.logicalKey == LogicalKeyboardKey.enter) {
+                              char = "\n";
+                            }
+                            controller.insertChar(
+                              selection.baseOffset,
+                              char,
+                            );
+                          }
                         }
                       }
                       return KeyEventResult.ignored;

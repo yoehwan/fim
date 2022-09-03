@@ -72,7 +72,7 @@ class NavigatorArrowAction extends Action<NavigatorArrowIntent> {
         beforeLineTextLen -
         1 +
         math.min(normalizedOffset, beforeLineTextLen);
-    _updatSelection(TextSelection.collapsed(offset: newOffset));
+    _updateSelection(TextSelection.collapsed(offset: newOffset));
   }
 
   void _down() {
@@ -86,7 +86,7 @@ class NavigatorArrowAction extends Action<NavigatorArrowIntent> {
       currentOffset: currentOffset.baseOffset,
     );
     if (lineNumberIndex == list.length - 1) {
-      _updatSelection(
+      _updateSelection(
         selection.copyWith(
           baseOffset: text.length,
         ),
@@ -99,7 +99,7 @@ class NavigatorArrowAction extends Action<NavigatorArrowIntent> {
         currentLineTextLen +
         1 +
         math.min(normalizedOffset, nextLineTextLen);
-    _updatSelection(TextSelection.collapsed(offset: newOffset));
+    _updateSelection(TextSelection.collapsed(offset: newOffset));
   }
 
   void _left() {
@@ -119,7 +119,7 @@ class NavigatorArrowAction extends Action<NavigatorArrowIntent> {
         offset: baseOffset - 1,
       );
     }
-    _updatSelection(tmpSelection);
+    _updateSelection(tmpSelection);
   }
 
   void _right() {
@@ -138,10 +138,10 @@ class NavigatorArrowAction extends Action<NavigatorArrowIntent> {
         offset: baseOffset + 1,
       );
     }
-    _updatSelection(tmpSelection);
+    _updateSelection(tmpSelection);
   }
 
-  void _updatSelection(TextSelection selection) {
+  void _updateSelection(TextSelection selection) {
     controller.selection = selection;
   }
 }
