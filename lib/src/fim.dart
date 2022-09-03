@@ -24,6 +24,30 @@ class _FimState extends State<Fim> {
   FimController get controller => widget.controller;
   FimMode get mode => controller.mode;
 
+  late ShortcutManager _manager;
+
+  void _loadManager() {
+    _manager = ShortcutManager(
+      shortcuts: {
+        ..._defaultShortcuts(),
+        ..._insertShortcuts(),
+        ..._commandShortcuts(),
+        ..._visualShortcuts(),
+      },
+    );
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadManager();
+    controller.addListener(_listener);
+  }
+
+  void _listener() {
+    _loadManager();
+  }
+
   bool isArrow(LogicalKeyboardKey key) {
     final list = [0x00100000301, 0x00100000302, 0x00100000303, 0x00100000304];
     return list.contains(key.keyId);
@@ -127,19 +151,15 @@ class _FimState extends State<Fim> {
             valueListenable: controller,
             builder: (context, value, _) {
               final mode = value.mode;
-              return Shortcuts(
-                shortcuts: {
-                  ..._defaultShortcuts(),
-                  ..._insertShortcuts(),
-                  ..._commandShortcuts(),
-                  ..._visualShortcuts(),
-                },
+              return Shortcuts.manager(
+                manager: _manager,
                 child: Actions(
                   actions: {
                     ModeIntent: ModeAction(controller),
                     NavigatorWordIntent: NavigatorWordAction(controller),
                     NavigatorArrowIntent: NavigatorArrowAction(controller),
                     NewLineIntent: NewLineAction(controller),
+                    InsertCharIntent: InsertCharAction(),
                   },
                   child: Focus(
                     autofocus: true,
