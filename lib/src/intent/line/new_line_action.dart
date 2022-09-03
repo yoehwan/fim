@@ -3,21 +3,25 @@ part of intent;
 class NewLineAction extends Action<NewLineIntent> {
   NewLineAction(this.controller);
   final FimController controller;
-  TextSelection get selection => controller.selection;
   @override
   void invoke(NewLineIntent intent) {
-    final text = controller.fimText;
-    final currentLine = text.findLine(selection.baseOffset);
+    final fimText = controller.fimText;
+    final selection = controller.selection;
+    final currentLine = fimText.findLine(selection.baseOffset);
     if (currentLine == null) {
       return;
     }
 
-  // todo: fix insert char & move caret
-    if (intent.front) {
-      controller.insertChar(currentLine.end, "\n");
-    } else {
-      controller.insertChar(currentLine.start, "\n");
-    }
-    controller.mode = FimMode.insert;
+    final front = intent.front;
+    final text = fimText.text;
+    List<String> newText = text.characters.toList();
+    final newOffset = front ? currentLine.end : currentLine.start;
+    newText.insert(newOffset, "\n");
+    controller.value = controller.value.copyWith(
+      mode: FimMode.insert,
+      fimText: FimText(text: newText.join()),
+      selection:
+          TextSelection.collapsed(offset: front ? newOffset + 1 : newOffset),
+    );
   }
 }
