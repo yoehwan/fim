@@ -1,8 +1,8 @@
 import 'dart:math' as math;
 import 'package:fim/fim.dart';
-import 'package:fim/src/enum/word_postion.dart';
 import 'package:fim/src/intent/intent.dart';
 import 'package:fim/src/model/fim_value.dart';
+import 'package:fim/src/shortcut/fim_shortcut.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -29,10 +29,10 @@ class _FimState extends State<Fim> {
   void _loadManager() {
     _manager = ShortcutManager(
       shortcuts: {
-        ..._defaultShortcuts(),
-        ..._insertShortcuts(),
-        ..._commandShortcuts(),
-        ..._visualShortcuts(),
+        ...defaultShortcuts(),
+        ...insertShortcuts(mode),
+        ...commandShortcuts(mode),
+        ...visualShortcuts(mode),
       },
     );
   }
@@ -51,94 +51,6 @@ class _FimState extends State<Fim> {
   bool isArrow(LogicalKeyboardKey key) {
     final list = [0x00100000301, 0x00100000302, 0x00100000303, 0x00100000304];
     return list.contains(key.keyId);
-  }
-
-  Map<ShortcutActivator, Intent> _visualShortcuts() {
-    if (!mode.isVisual) {
-      return {};
-    }
-    return {
-      const SingleActivator(LogicalKeyboardKey.escape):
-          const ModeIntent(FimMode.command),
-      // Direction
-      const SingleActivator(LogicalKeyboardKey.keyH):
-          const NavigatorArrowIntent(TraversalDirection.left),
-      const SingleActivator(LogicalKeyboardKey.keyL):
-          const NavigatorArrowIntent(TraversalDirection.right),
-      const SingleActivator(LogicalKeyboardKey.keyJ):
-          const NavigatorArrowIntent(TraversalDirection.down),
-      const SingleActivator(LogicalKeyboardKey.keyK):
-          const NavigatorArrowIntent(TraversalDirection.up),
-
-      // Navigator
-      const SingleActivator(LogicalKeyboardKey.keyE):
-          const NavigatorWordIntent(front: true, wordPostion: WordPostion.tail),
-      const SingleActivator(LogicalKeyboardKey.keyW):
-          const NavigatorWordIntent(front: true, wordPostion: WordPostion.head),
-      const SingleActivator(LogicalKeyboardKey.keyB): const NavigatorWordIntent(
-          front: false, wordPostion: WordPostion.head),
-    };
-  }
-
-  Map<ShortcutActivator, Intent> _commandShortcuts() {
-    if (!mode.isCommand) {
-      return {};
-    }
-    return {
-      const SingleActivator(LogicalKeyboardKey.keyA):
-          const ModeIntent(FimMode.insert, after: true),
-      const SingleActivator(LogicalKeyboardKey.keyI):
-          const ModeIntent(FimMode.insert),
-      const SingleActivator(LogicalKeyboardKey.keyV):
-          const ModeIntent(FimMode.visual),
-      // Direction
-      const SingleActivator(LogicalKeyboardKey.keyH):
-          const NavigatorArrowIntent(TraversalDirection.left),
-      const SingleActivator(LogicalKeyboardKey.keyL):
-          const NavigatorArrowIntent(TraversalDirection.right),
-      const SingleActivator(LogicalKeyboardKey.keyJ):
-          const NavigatorArrowIntent(TraversalDirection.down),
-      const SingleActivator(LogicalKeyboardKey.keyK):
-          const NavigatorArrowIntent(TraversalDirection.up),
-
-      // Navigator
-      const SingleActivator(LogicalKeyboardKey.keyE):
-          const NavigatorWordIntent(front: true, wordPostion: WordPostion.tail),
-      const SingleActivator(LogicalKeyboardKey.keyW):
-          const NavigatorWordIntent(front: true, wordPostion: WordPostion.head),
-      const SingleActivator(LogicalKeyboardKey.keyB): const NavigatorWordIntent(
-          front: false, wordPostion: WordPostion.head),
-
-      // Line
-      const SingleActivator(LogicalKeyboardKey.keyO):
-          const NewLineIntent(front: true),
-      const SingleActivator(LogicalKeyboardKey.keyO, shift: true):
-          const NewLineIntent(front: false)
-    };
-  }
-
-  Map<ShortcutActivator, Intent> _defaultShortcuts() {
-    return {
-      // Direction
-      const SingleActivator(LogicalKeyboardKey.arrowLeft):
-          const NavigatorArrowIntent(TraversalDirection.left),
-      const SingleActivator(LogicalKeyboardKey.arrowRight):
-          const NavigatorArrowIntent(TraversalDirection.right),
-      const SingleActivator(LogicalKeyboardKey.arrowDown):
-          const NavigatorArrowIntent(TraversalDirection.down),
-      const SingleActivator(LogicalKeyboardKey.arrowUp):
-          const NavigatorArrowIntent(TraversalDirection.up),
-    };
-  }
-
-  Map<ShortcutActivator, Intent> _insertShortcuts() {
-    if (!mode.isInsert) {
-      return {};
-    }
-    return {
-      const SingleActivator(LogicalKeyboardKey.escape):
-          const ModeIntent(FimMode.command),
-    };
   }
 
   @override
