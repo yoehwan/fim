@@ -97,11 +97,12 @@ class _FimState extends State<Fim> {
                           keyLabel = "\n";
                         }
                         final isBS = logicalKey == LogicalKeyboardKey.backspace;
-                        TextSelection selection = widget.controller.selection;
+                        final caretOffset = controller.caretOffset;
                         if (isBS) {
                           controller.removeSelection(
-                            selection.copyWith(
-                              baseOffset: selection.baseOffset - 1,
+                            TextSelection(
+                              baseOffset: caretOffset-1,
+                              extentOffset: caretOffset,
                             ),
                           );
                         } else {
@@ -110,7 +111,7 @@ class _FimState extends State<Fim> {
                               char = "\n";
                             }
                             controller.insertChar(
-                              selection.baseOffset,
+                              caretOffset,
                               char,
                             );
                           }
@@ -129,6 +130,7 @@ class _FimState extends State<Fim> {
                             lineNumber: widget.lineNumber,
                             mode: mode,
                             selection: value.selection,
+                            caretOffset: value.caretOffset,
                           ),
                         ),
                       ),
@@ -151,11 +153,13 @@ class _FimRenderObjectWidget extends LeafRenderObjectWidget {
     required this.lineNumber,
     required this.mode,
     required this.selection,
+    required this.caretOffset,
   }) : super(key: key);
   final InlineSpan? text;
   final bool lineNumber;
   final FimMode mode;
   final TextSelection selection;
+  final int caretOffset;
   @override
   RenderFim createRenderObject(BuildContext context) {
     return RenderFim(
@@ -163,12 +167,14 @@ class _FimRenderObjectWidget extends LeafRenderObjectWidget {
       lineNumber: lineNumber,
       mode: mode,
       selection: selection,
+      caretOffset: caretOffset,
     );
   }
 
   @override
   void updateRenderObject(BuildContext context, RenderFim renderObject) {
     renderObject
+      ..caretOffset = caretOffset
       ..selection = selection
       ..mode = mode
       ..text = text
@@ -182,13 +188,25 @@ class RenderFim extends RenderBox {
     required bool lineNumber,
     required FimMode mode,
     required TextSelection selection,
-  })  : _selection = selection,
+    required int caretOffset,
+  })  : _caretOffset = caretOffset,
+        _selection = selection,
         _mode = mode,
         _lineNumber = lineNumber,
         _textPainter = TextPainter(
           text: text,
           textDirection: TextDirection.ltr,
         );
+
+  late int _caretOffset;
+  int get caretOffset => _caretOffset;
+  set caretOffset(int value) {
+    if (_caretOffset == value) {
+      return;
+    }
+    _caretOffset = value;
+    markNeedsPaint();
+  }
 
   late TextSelection _selection;
   TextSelection get selection => _selection;
@@ -251,7 +269,7 @@ class RenderFim extends RenderBox {
     _textPainter.layout();
   }
 
-  void _paintCaret(PaintingContext context, Offset offset) {
+  void _paintSelection(PaintingContext context, Offset offset) {
     final List<TextBox> boxList = _textPainter.getBoxesForSelection(selection);
     final editorOffset = offset.translate(_lineNumberWidth, 0);
 
@@ -273,6 +291,25 @@ class RenderFim extends RenderBox {
         editorOffset + extentOffset + caretSize,
       ),
       Paint()..color = Colors.red.withOpacity(0.6),
+    );
+  }
+
+  void _paintCaret(PaintingContext context, Offset offset) {
+    final editorOffset = offset.translate(_lineNumberWidth, 0);
+    final caretPosition = _textPainter.getOffsetForCaret(
+          TextPosition(offset: caretOffset),
+          caretRect,
+        ) +
+        editorOffset;
+    final paint = Paint()..color = Colors.red.withOpacity(0.6);
+    context.canvas.drawRect(
+      Rect.fromLTWH(
+        caretPosition.dx,
+        caretPosition.dy,
+        caretRect.width,
+        caretRect.height,
+      ),
+      paint,
     );
   }
 

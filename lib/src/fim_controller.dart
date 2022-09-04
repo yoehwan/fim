@@ -49,26 +49,34 @@ class FimController extends ValueNotifier<FimValue> {
     value = value.copyWith(selection: newValue);
   }
 
+  int get caretOffset => value.caretOffset;
+  set caretOffset(int newValue) {
+    if (value.caretOffset == newValue) {
+      return;
+    }
+    value = value.copyWith(caretOffset: newValue);
+  }
+
   void insertChar(int offset, String char) {
     final newText = text.characters.toList();
     newText.insert(offset, char);
     value = value.copyWith(
       fimText: FimText(text: newText.join()),
-      selection: TextSelection.collapsed(offset: offset + 1),
+      caretOffset: offset + char.length,
     );
   }
 
   void removeSelection(TextSelection removeSelection) {
-    final baseOffset = removeSelection.baseOffset;
-    if (selection.extentOffset == 0) {
+    if (!removeSelection.isValid) {
       return;
     }
+    final baseOffset = removeSelection.baseOffset;
     value = value.copyWith(
       fimText: FimText(
         text:
             removeSelection.textBefore(text) + removeSelection.textAfter(text),
       ),
-      selection: TextSelection.collapsed(offset: baseOffset),
+      caretOffset: baseOffset,
     );
   }
 
